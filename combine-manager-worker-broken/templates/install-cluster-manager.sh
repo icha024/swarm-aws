@@ -27,5 +27,5 @@ touch /tmp/swarm-started
 
 apt-get -y install nginx
 docker swarm join-token worker --quiet | gpg --symmetric --armor --passphrase "${swarm_token_password}" > /tmp/token
-mv /tmp/token /var/www/html/token
+mv /tmp/token /usr/share/nginx/html/token
 touch /tmp/nginx-started

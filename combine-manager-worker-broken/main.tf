@@ -4,6 +4,22 @@ provider "aws" {
   region     = "${var.region}"
 }
 
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-trusty-14.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
 resource "random_string" "swarm-token-password" {
   # Generate and store the random string in TF state.
   length  = 32
@@ -19,7 +35,7 @@ data "template_file" "install-cluster-manager" {
 }
 
 data "template_file" "join-cluster" {
-  template = "${file("${path. odule}/templates/join-cluster.sh")}"
+  template = "${file("${path.module}/templates/join-cluster.sh")}"
 
   vars {
     swarm_master_ip      = "${aws_instance.swarm-manager.private_ip}"
@@ -27,10 +43,43 @@ data "template_file" "join-cluster" {
   }
 }
 
+resource "aws_launch_configuration" "swarm-launch-conf" {
+  name_prefix     = "swarm-worker-"
+  image_id        = "${data.aws_ami.ubuntu.id}"
+  instance_type   = "${var.instance_type}"
+  key_name        = "${var.SSH_KEY_NAME}"
+  user_data       = "${data.template_file.join-cluster.rendered}"
+  security_groups = "${var.existing_security_group_ids}"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_group" "swarm-asg" {
+  name                 = "swarm-asg"
+  launch_configuration = "${aws_launch_configuration.swarm-launch-conf.name}"
+  min_size             = 1
+  max_size             = 2
+  availability_zones   = ["${var.availability_zone}"]
+  termination_policies = "OldestInstance"
+  depends_on           = ["aws_instance.swarm-manager"]
+
+  tag {
+    key                 = "Name"
+    value               = "swarm-worker-asg"
+    propagate_at_launch = true
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 resource "aws_instance" "swarm-manager" {
-  ami                    = "${var.ami_id}"
+  ami                    = "${data.aws_ami.ubuntu.id}"
   instance_type          = "${var.instance_type}"
-  key_name               = "${var.key_name}"
+  key_name               = "${var.SSH_KEY_NAME}"
   vpc_security_group_ids = "${var.existing_security_group_ids}"
 
   # subnet_id              = "${aws_subnet.swarm-subnet.id}"
@@ -45,31 +94,34 @@ resource "aws_instance" "swarm-manager" {
   tags {
     Name = "swarm-manager-${count.index}"
   }
-}
 
-resource "aws_instance" "swarm-worker" {
-  ami                    = "${var.ami_id}"
-  instance_type          = "${var.instance_type}"
-  key_name               = "${var.key_name}"
-  vpc_security_group_ids = "${var.existing_security_group_ids}"
-
-  # subnet_id              = "${aws_subnet.swarm-subnet.id}"
-  # vpc_security_group_ids = ["${aws_security_group.swarm-sg.id}"]
-  user_data = "${data.template_file.join-cluster.rendered}"
-
-  count = 2
-
-  root_block_device = {
-    delete_on_termination = true
-    volume_size           = 10
-  }
-
-  depends_on = ["aws_instance.swarm-manager"]
-
-  tags {
-    Name = "swarm-worker-${count.index}"
+  lifecycle {
+    create_before_destroy = true
   }
 }
+
+# resource "aws_instance" "swarm-worker" {
+#   ami                    = "${data.aws_ami.ubuntu.id}"
+#   instance_type          = "${var.instance_type}"
+#   key_name               = "${var.SSH_KEY_NAME}"
+#   vpc_security_group_ids = "${var.existing_security_group_ids}"
+
+#   # subnet_id              = "${aws_subnet.swarm-subnet.id}"
+#   # vpc_security_group_ids = ["${aws_security_group.swarm-sg.id}"]
+#   user_data = "${data.template_file.join-cluster.rendered}"
+
+#   count      = 2
+#   depends_on = ["aws_instance.swarm-manager"]
+
+#   root_block_device = {
+#     delete_on_termination = true
+#     volume_size           = 10
+#   }
+
+#   tags {
+#     Name = "swarm-worker-${count.index}"
+#   }
+# }
 
 output "manager-public-ip" {
   value = "${aws_instance.swarm-manager.public_ip}"
@@ -79,9 +131,15 @@ output "manager-private-ip" {
   value = "${aws_instance.swarm-manager.private_ip}"
 }
 
-output "worker-public-ip" {
-  value = ["${aws_instance.swarm-worker.*.public_ip}"]
-}
+# output "worker-public-ip" {
+#   value = ["${aws_instance.swarm-worker.*.public_ip}"]
+# }
+
+
+# output "worker-public-ip" {
+#   value = ["${aws_instance.swarm-worker.*.public_ip}"]
+# }
+
 
 /* Optional. Disable to use existing default. */
 
