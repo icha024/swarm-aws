@@ -22,8 +22,5 @@ apt-get -y install docker-ce
 usermod -a -G docker ubuntu
 touch /tmp/installed-docker
 
-# docker swarm join --token SWMTKN-1-5wbwd33xxl2pm619gld8xxeosk2x2ajby5v1yjzigbvz69apev-0z1hwm9i42ljnibx03oftwnvu 172.31.7.203:2377 | tee /tmp/swarm-joined
-
 curl ${swarm_master_ip}/token > /tmp/token
-# cat /tmp/token | gpg --decrypt --passphrase "${gpg_password}" > /tmp/swarm-token
-docker swarm join --token $$(cat /tmp/token | gpg --decrypt --passphrase "${gpg_password}") ${swarm_master_ip}:2377 | tee /tmp/swarm-joined
+docker swarm join --token $$(cat /tmp/token | gpg --decrypt --passphrase "${swarm_token_password}") ${swarm_master_ip}:2377 | tee /tmp/swarm-joined
