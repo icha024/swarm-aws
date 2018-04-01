@@ -6,12 +6,20 @@ variable "SECRET_KEY" {
   description = "secret key"
 }
 
-variable "security_group_ids" {
+variable "existing_security_group_ids" {
   default = ["sg-07939d6f"]
 }
 
 variable "instance_type" {
   default = "t2.micro"
+}
+
+variable "region" {
+  default = "eu-west-2"
+}
+
+variable "availability_zone" {
+  default = "eu-west-2a"
 }
 
 variable "ami_id" {
