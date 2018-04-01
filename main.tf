@@ -62,7 +62,7 @@ resource "aws_autoscaling_group" "swarm-asg" {
   min_size             = 1
   max_size             = 2
   availability_zones   = ["${var.availability_zone}"]
-  termination_policies = "OldestInstance"
+  termination_policies = ["OldestInstance"]
   depends_on           = ["aws_instance.swarm-manager"]
 
   tag {
@@ -80,48 +80,23 @@ resource "aws_instance" "swarm-manager" {
   ami                    = "${data.aws_ami.ubuntu.id}"
   instance_type          = "${var.instance_type}"
   key_name               = "${var.SSH_KEY_NAME}"
+  user_data              = "${data.template_file.install-cluster-manager.rendered}"
   vpc_security_group_ids = "${var.existing_security_group_ids}"
 
   # subnet_id              = "${aws_subnet.swarm-subnet.id}"
   # vpc_security_group_ids = ["${aws_security_group.swarm-sg.id}"]
-  user_data = "${data.template_file.install-cluster-manager.rendered}"
 
   root_block_device = {
     delete_on_termination = true
     volume_size           = 10
   }
-
   tags {
     Name = "swarm-manager-${count.index}"
   }
-
   lifecycle {
     create_before_destroy = true
   }
 }
-
-# resource "aws_instance" "swarm-worker" {
-#   ami                    = "${data.aws_ami.ubuntu.id}"
-#   instance_type          = "${var.instance_type}"
-#   key_name               = "${var.SSH_KEY_NAME}"
-#   vpc_security_group_ids = "${var.existing_security_group_ids}"
-
-#   # subnet_id              = "${aws_subnet.swarm-subnet.id}"
-#   # vpc_security_group_ids = ["${aws_security_group.swarm-sg.id}"]
-#   user_data = "${data.template_file.join-cluster.rendered}"
-
-#   count      = 2
-#   depends_on = ["aws_instance.swarm-manager"]
-
-#   root_block_device = {
-#     delete_on_termination = true
-#     volume_size           = 10
-#   }
-
-#   tags {
-#     Name = "swarm-worker-${count.index}"
-#   }
-# }
 
 output "manager-public-ip" {
   value = "${aws_instance.swarm-manager.public_ip}"
@@ -131,8 +106,34 @@ output "manager-private-ip" {
   value = "${aws_instance.swarm-manager.private_ip}"
 }
 
-# output "worker-public-ip" {
-#   value = ["${aws_instance.swarm-worker.*.public_ip}"]
+/* ---------------- Static worker ---------------- */
+
+
+# resource "aws_instance" "swarm-worker" {
+#   ami                    = "${data.aws_ami.ubuntu.id}"
+#   instance_type          = "${var.instance_type}"
+#   key_name               = "${var.SSH_KEY_NAME}"
+#   vpc_security_group_ids = "${var.existing_security_group_ids}"
+
+
+#   # subnet_id              = "${aws_subnet.swarm-subnet.id}"
+#   # vpc_security_group_ids = ["${aws_security_group.swarm-sg.id}"]
+#   user_data = "${data.template_file.join-cluster.rendered}"
+
+
+#   count      = 2
+#   depends_on = ["aws_instance.swarm-manager"]
+
+
+#   root_block_device = {
+#     delete_on_termination = true
+#     volume_size           = 10
+#   }
+
+
+#   tags {
+#     Name = "swarm-worker-${count.index}"
+#   }
 # }
 
 
@@ -141,7 +142,7 @@ output "manager-private-ip" {
 # }
 
 
-/* Optional. Disable to use existing default. */
+/* ---------------- Create separate network ---------------- */
 
 
 # resource "aws_internet_gateway" "swarm-gw" {
