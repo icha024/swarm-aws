@@ -37,3 +37,11 @@ provisioner "file" {
     destination = "/path/to/dest.file"
 }
 ```
+
+Rebalance
+```
+docker service create --replicas 3 --name nist-mirror --constraint 'node.role!=manager' -p 8080:80  icha024/n-mirror:20180401
+docker service ps nist-mirror
+docker service update nist-mirror --force
+docker service ps nist-mirror
+```
