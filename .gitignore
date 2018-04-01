@@ -1,0 +1,6 @@
+**/*.tfstate
+**/*tfstate*
+**/*.tfstate.backup
+**/.terraform/
+**/access_key*
+**/*.retry
