@@ -76,6 +76,21 @@ resource "aws_autoscaling_group" "swarm-asg" {
   }
 }
 
+resource "aws_autoscaling_policy" "swarm-scale-policy" {
+  name                      = "swarm-scale-policy"
+  autoscaling_group_name    = "${aws_autoscaling_group.swarm-asg.name}"
+  policy_type               = "TargetTrackingScaling"
+  estimated_instance_warmup = "300"
+
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+
+    target_value = 50.0
+  }
+}
+
 resource "aws_instance" "swarm-manager" {
   ami                    = "${data.aws_ami.ubuntu.id}"
   instance_type          = "${var.instance_type}"
@@ -91,7 +106,7 @@ resource "aws_instance" "swarm-manager" {
     volume_size           = 10
   }
   tags {
-    Name = "swarm-manager-${count.index}"
+    Name = "swarm-manager"
   }
   lifecycle {
     create_before_destroy = true
