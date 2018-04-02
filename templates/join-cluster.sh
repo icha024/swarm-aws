@@ -31,6 +31,15 @@ sleep 10
 curl ${swarm_master_ip}/token > /tmp/token
 docker swarm join --token $$(cat /tmp/token | gpg --decrypt --passphrase "${swarm_token_password}") ${swarm_master_ip}:2377 | tee /tmp/swarm-joined
 
+# Leave Cluster on Shutdown
+touch /usr/local/bin/balance-swarm.sh
+cat > /usr/local/bin/balance-swarm.sh <<EOF
+    #!/bin/sh
+    docker swarm leave --force
+EOF
+ln -s /usr/local/bin/balance-swarm.sh /etc/rc6.d/K99leaveswarm
+chmod +x /etc/rc6.d/K99leaveswarm
+
 # Automated weekly update
 touch /etc/cron.weekly/unattended-upgrade.sh
 chmod +x /etc/cron.weekly/unattended-upgrade.sh

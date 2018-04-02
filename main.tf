@@ -53,7 +53,7 @@ resource "aws_launch_configuration" "swarm-launch-conf" {
 
   root_block_device = {
     delete_on_termination = true
-    volume_size           = 3
+    volume_size           = 10
   }
 
   lifecycle {
