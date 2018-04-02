@@ -15,7 +15,7 @@ variable "existing_security_group_ids" {
 }
 
 variable "instance_type" {
-  default = "t2.micro"
+  default = "t2.nano"
 }
 
 variable "region" {
