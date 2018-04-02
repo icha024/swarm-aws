@@ -51,6 +51,11 @@ resource "aws_launch_configuration" "swarm-launch-conf" {
   user_data       = "${data.template_file.join-cluster.rendered}"
   security_groups = "${var.existing_security_group_ids}"
 
+  root_block_device = {
+    delete_on_termination = true
+    volume_size           = 3
+  }
+
   lifecycle {
     create_before_destroy = true
   }
