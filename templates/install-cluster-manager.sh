@@ -39,11 +39,10 @@ chmod +x /usr/local/bin/balance-swarm.sh
 cat > /usr/local/bin/balance-swarm.sh <<EOF
     #!/bin/sh
     events=\$$(docker events --since \$$(date +%Y-%m-%dT%H:%M:%S -d '2 min ago') --filter 'type=node' --filter 'event=create' --format '{{json .}}' --until \$$(date +%Y-%m-%dT%H:%M:%S))
-    echo "Events: \$$events" >> /tmp/swarm-bal.log
 
     if [ \$$events ]
     then
-        docker service ls --filter 'mode=replicated' --format "{{.Name}}" | xargs -I '{}' timeout 120 docker service update '{}' --force >> /tmp/swarm-bal.log
+        docker service ls --filter 'mode=replicated' --format "{{.Name}}" | xargs -I '{}' timeout 120 docker service update '{}' --force &
     fi
 EOF
 
